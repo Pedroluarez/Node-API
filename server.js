@@ -1,90 +1,53 @@
+// for env variables file
+require("dotenv").config();
 // for expressjs
 const express = require("express");
 // for mongodb
 const mongoose = require("mongoose");
-// import model product
-const Product = require("./models/productModel");
+// calling the routers
+const productRoute = require("./routes/productRoutes");
+// calling the error middleware
+const errorMiddleware = require("./middleware/errorMiddleware");
+// calling CORS
+const cors = require("cors");
+
+// calling the env variable in env file
+const MONGO_URL = process.env.MONGO_URL;
+const FRONTEND = process.env.FRONTEND;
+const PORT = process.env.PORT || 3000;
+
 const app = express();
 
-// middleware to read json request
+// specific
+var corsOptions = {
+  // specifies who only can access the domain/api
+  origin: FRONTEND,
+  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+};
+
+// middleware
 app.use(express.json());
+// middleware for cors
+app.use(cors(corsOptions));
+// middleware for calling of routes
+app.use("/api/products", productRoute);
 
-//routes
-//get products
-app.get("/products", async (req, res) => {
-  try {
-    const products = await Product.find({});
-    res.status(200).json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+// app.get("/", (req, res) => {
+//   throw new Error("Fake error");
+// });
 
-app.get("/products/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const product = await Product.findById(id);
-    res.status(200).json(product);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-//post products
-app.post("/products", async (req, res) => {
-  try {
-    const product = await Product.create(req.body);
-    res.status(200).json(product);
-  } catch (error) {
-    console.log(error.message);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// put product
-app.put("/products/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const product = await Product.findByIdAndUpdate(id, req.body);
-    // we cannot find any product in database
-    if (!product) {
-      return res
-        .status(404)
-        .json({ message: `cannot find any product with ID ${id}` });
-    }
-    const updatedProduct = await Product.findById(id);
-    res.status(200).json(updatedProduct);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
-//delete product
-app.delete("/products/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const product = await Product.findByIdAndDelete(id);
-    if (!product) {
-      return res
-        .status(404)
-        .json({ message: `cannot find any product with ID ${id}` });
-    }
-    res.status(200).json(product);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+// middleware for calling error middleware
+app.use(errorMiddleware);
 
 // mongodb connection
+mongoose.set("strictQuery", false);
 mongoose
-  .connect(
-    "mongodb+srv://admin:8ShloHSMsU57RtoE@pedroapi.3fwtuvy.mongodb.net/Node-API?retryWrites=true&w=majority"
-  )
+  .connect(MONGO_URL)
   .then(() => {
     console.log("connected to MongoDB");
     // listener
-    app.listen(3000, () => {
-      console.log(`Node API app is running on port 3000`);
+    app.listen(PORT, () => {
+      console.log(`Node API app is running on port ${PORT}`);
     });
   })
   .catch((error) => {
